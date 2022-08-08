@@ -16,7 +16,7 @@ global allProds
 allProds = []
 
 
-def connect(page):
+def connect(page, srch):
     soup = None
     products = None
 
@@ -43,6 +43,8 @@ def connect(page):
                 name = "".join(product.find_next("a").get_text(strip=True))
                 name = re.sub(r"((?![A-Z])\w)([A-Z])", r"\1 \2", name)
                 names.append(name)
+                price = product.find_next("strong", {"class": "price"}).get_text(strip=True)
+                prices.append(price)
 
             return soup, products
         except Exception as e:
@@ -51,63 +53,64 @@ def connect(page):
             print("Connecting again...")
     return "Timeout"
 
+def initialize():
+    print("Welcome!")
+    print("Let's get searching")
+    inp = input("What are we searching for?: ")
 
-print("Welcome!")
-print("Let's get searching")
-inp = input("What are we searching for?: ")
+    print("And lastly")
+    pages = input("How many pages to scrape?( be careful here :) ): ")
 
-print("And lastly")
-pages = input("How many pages to scrape?( be careful here :) ): ")
+    spInp = re.split(r"\s+", inp)
 
-spInp = re.split(r"\s+", inp)
+    srch = f"word={spInp[0]}"
+    for i in range(1, len(spInp)):
+        srch += f"%2B{spInp[i]}"
 
-srch = f"word={spInp[0]}"
-for i in range(1, len(spInp)):
-    srch += f"%2B{spInp[i]}"
+    for page in range(int(pages)):
+        connect(page, srch)
 
+    fname = "result.xlsx"
 
-for page in range(int(pages)):
-    connect(page)
+    wbook = openpyxl.Workbook()
+    sheet = wbook.active
 
-fname = "result.xlsx"
+    # Managing Excel columns and headers
+    fhead = openpyxl.styles.Font(
+        size=12,
+        bold=True,
+    )
 
-wbook = openpyxl.Workbook()
-sheet = wbook.active
+    sheet["B1"] = "Name"
+    sheet["C1"] = "Price"
+    sheet["D1"] = "Image"
+    sheet["E1"] = "URL"
 
+    sheet["B1"].font = fhead
+    sheet["C1"].font = fhead
+    sheet["D1"].font = fhead
+    sheet["E1"].font = fhead
 
-#Managing Excel columns and headers
-fhead = openpyxl.styles.Font(
-    size = 12,
-    bold = True,
-)
+    print(len(allProds))
+    print(len(names))
+    print(len(prices))
+    print(len(images))
+    print(len(urls))
 
-sheet["B1"] = "Name"
-sheet["C1"] = "Price"
-sheet["D1"] = "Image"
-sheet["E1"] = "URL"
+    print(names)
 
-sheet["B1"].font = fhead
-sheet["C1"].font = fhead
-sheet["D1"].font = fhead
-sheet["E1"].font = fhead
+    for i in range(len(allProds)):
+        sheet[f"A{i + 2}"] = i + 1
+        sheet[f"B{i + 2}"] = names[i] if i < len(allProds) and len(names) != 0 else "NULL"
+        sheet[f"C{i + 2}"] = prices[i] if i <= len(allProds) and len(prices) != 0 else "NULL"
+        sheet[f"D{i + 2}"] = images[i] if i <= len(allProds) and len(images) != 0 else "NULL"
 
-print(len(allProds))
-print(len(names))
-print(len(prices))
-print(len(images))
-print(len(urls))
+        # URL + stylings
+        sheet[f"E{i + 2}"].value = "URL"
+        sheet[f"E{i + 2}"].style = "Hyperlink"
+        sheet[f"E{i + 2}"].hyperlink = urls[i] if len(urls) != 0 else "NULL"
 
-print(names)
+    wbook.save(filename=fname)
 
-for i in range(len(allProds)):
-    sheet[f"A{i+2}"] = i + 1
-    sheet[f"B{i+2}"] = names[i] if i < len(allProds) and len(names) != 0 else "NULL"
-    sheet[f"C{i+2}"] = prices[i] if i <= len(allProds) and len(prices) != 0 else "NULL"
-    sheet[f"D{i+2}"] = images[i] if i <= len(allProds) and len(images) != 0 else "NULL"
-
-    #URL + stylings
-    sheet[f"E{i+2}"].value = "URL"
-    sheet[f"E{i+2}"].style = "Hyperlink"
-    sheet[f"E{i+2}"].hyperlink = urls[i] if len(urls) != 0 else "NULL"
-
-wbook.save(filename=fname)
+if __name__ == "__main__":
+    initialize()
